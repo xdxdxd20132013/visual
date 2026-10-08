@@ -7,11 +7,11 @@ local SettingsFrame = Instance.new("Frame")
 local GraySkyBtn = Instance.new("TextButton")
 local AntiShakeBtn = Instance.new("TextButton")
 
--- НАЛАТУВАННЯ ЗБЕРЕЖЕННЯ (Пам'ять читу між серверами)
+-- НАЛАШТУВАННЯ ЗБЕРЕЖЕННЯ (Пам'ять читу між серверами)
 local HttpService = game:GetService("HttpService")
 local fileName = "BloxFruits_Xeno_Config.json"
 
--- Стандартні налаштування (якщо файл конфігу ще не створено)
+-- Стандартні налаштування (Швидкість встановлено на 250)
 _G.Config = {
     FlySpeed = 250,
     GraySky = false,
@@ -45,10 +45,22 @@ end
 -- ЗАВАНТАЖУЄМО НАЛАШТУВАННЯ ОДРАЗУ ПРИ ЗАПУСКУ
 loadSettings()
 
+-- ШАБЛОН СТИЛІЗАЦІЇ КНОПОК (Додано, щоб не було помилки "styleButton is nil")
+local function styleButton(btn, parent, text, color)
+    btn.Parent = parent 
+    btn.Size = UDim2.new(1, 0, 0, 28)
+    btn.BackgroundColor3 = color or Color3.fromRGB(45, 45, 55) 
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255) 
+    btn.TextSize = 12 
+    btn.Font = Enum.Font.SourceSansBold
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
+end
+
 -- ФУНКЦІЯ СТВОРЕННЯ КОНТЕЙНЕРІВ ДЛЯ ВКЛАДОК
 local function createTabFrame(f, name, visible)
     f.Name = name 
-    f.Parent = MainFrame
+    f.Parent = MainFrame or game:GetService("CoreGui"):FindFirstChild("BF_Xeno_Ultimate_Menu") or game:GetService("CoreGui")
     f.BackgroundTransparency = 1
     f.Position = UDim2.new(0, 0, 0.28, 0) 
     f.Size = UDim2.new(1, 0, 0.72, 0) 
@@ -76,29 +88,30 @@ local function switchTab(activeFrame, activeBtn)
     VisualFrame.Visible = (activeFrame == VisualFrame)
     SettingsFrame.Visible = (activeFrame == SettingsFrame)
     
-    CheatsTabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-    VisualTabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-    SettingsTabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-    activeBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    if CheatsTabBtn and VisualTabBtn and SettingsTabBtn then
+        CheatsTabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+        VisualTabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+        SettingsTabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+        activeBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    end
 end
 
-CheatsTabBtn.MouseButton1Click:Connect(function() switchTab(CheatsFrame, CheatsTabBtn) end)
-VisualTabBtn.MouseButton1Click:Connect(function() switchTab(VisualFrame, VisualTabBtn) end)
-SettingsTabBtn.MouseButton1Click:Connect(function() switchTab(SettingsFrame, SettingsTabBtn) end)
+if CheatsTabBtn then CheatsTabBtn.MouseButton1Click:Connect(function() switchTab(CheatsFrame, CheatsTabBtn) end) end
+if VisualTabBtn then VisualTabBtn.MouseButton1Click:Connect(function() switchTab(VisualFrame, VisualTabBtn) end) end
+if SettingsTabBtn then SettingsTabBtn.MouseButton1Click:Connect(function() switchTab(SettingsFrame, SettingsTabBtn) end) end
 
 
 -----------------------------------------------------------
--- ЛОГІКА ДЛЯ РОЗДІЛУ «ВІЗУАЛИ» (Нові функції)
+-- ЛОГІКА ДЛЯ РОЗДІЛУ «ВІЗУАЛИ»
 -----------------------------------------------------------
 
 -- 1. СІРЕ НЕБО (Gray Sky / FPS Boost)
-styleButton(GraySkyBtn, VisualFrame, "🔘 Сіре Небо: OFF")
+styleButton(GraySkyBtn, VisualFrame, "🔘... Скарчується стан")
 
 local function updateGraySkyVisual()
     if _G.Config.GraySky then
         GraySkyBtn.Text = "🟢 Сіре Небо: ON"
         GraySkyBtn.BackgroundColor3 = Color3.fromRGB(39, 174, 96)
-        -- Видаляємо текстури неба для ефекту сірості
         local sky = game:GetService("Lighting"):FindFirstChildOfClass("Sky")
         if sky then sky:Destroy() end
         game:GetService("Lighting").ClockTime = 12
@@ -110,26 +123,26 @@ end
 
 GraySkyBtn.MouseButton1Click:Connect(function()
     _G.Config.GraySky = not _G.Config.GraySky
-    saveSettings() -- Зберігаємо вибір
+    saveSettings() 
     updateGraySkyVisual()
 end)
 
 -- 2. АНТИ-ТРЯСІННЯ ЕКРАНУ (Anti Screen Shake)
-styleButton(AntiShakeBtn, VisualFrame, "🔘 Трясіння екрану: OFF")
+styleButton(AntiShakeBtn, VisualFrame, "🔘... Скарчується стан")
 
 local function updateAntiShakeLogic()
     if _G.Config.AntiShake then
         AntiShakeBtn.Text = "🟢 Anti Screen Shake: ON"
         AntiShakeBtn.BackgroundColor3 = Color3.fromRGB(39, 174, 96)
     else
-        AntiShakeBtn.Text = "🔘 Трясіння екрану: OFF"
+        AntiShakeBtn.Text = "🔘 Тнясіння екрану: OFF"
         AntiShakeBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
     end
 end
 
 AntiShakeBtn.MouseButton1Click:Connect(function()
     _G.Config.AntiShake = not _G.Config.AntiShake
-    saveSettings() -- Зберігаємо вибір
+    saveSettings() 
     updateAntiShakeLogic()
 end)
 
@@ -138,11 +151,9 @@ task.spawn(function()
     while task.wait(0.1) do
         if _G.Config.AntiShake then
             pcall(function()
-                -- Вимикаємо офіційне налаштування трясіння камери Blox Fruits
                 if game:GetService("Players").LocalPlayer:FindFirstChild("Settings") and game:GetService("Players").LocalPlayer.Settings:FindFirstChild("Camera Shake") then
                     game:GetService("Players").LocalPlayer.Settings["Camera Shake"].Value = false
                 end
-                -- Очищення сторонніх ефектів трясіння камери у Workspace
                 for _, v in pairs(workspace.CurrentCamera:GetChildren()) do
                     if v:IsA("Script") or v.Name:find("Shake") or v.Name:find("Cam") then
                         v:Destroy()
@@ -153,6 +164,7 @@ task.spawn(function()
     end
 end)
 
--- Авто-запуск стану кнопок при старті скрипта на новому сервері
+-- Авто-запуск стану кнопок при старті
 updateGraySkyVisual()
 updateAntiShakeLogic()
+

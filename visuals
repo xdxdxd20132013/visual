@@ -373,3 +373,75 @@ applyFontToAllGame(_G.Config.SelectedFont)
 updateGraySkyVisual()
 updateAntiShakeLogic()
 toggleFly()
+-- =========================================================
+-- ЧАСТИНА 5: АВТОНОМНА СИСТЕМА ПАМ'ЯТІ (БЕЗ ЗВ'ЯЗКУ З UI)
+-- =========================================================
+
+local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
+local fileName = "BloxFruits_Xeno_Config.json"
+
+-- Функція для безпечного зчитування конфігу при старті скрипта
+local function autoLoadXenoConfig()
+    if readfile and isfile and isfile(fileName) then
+        local success, data = pcall(function()
+            return HttpService:JSONDecode(readfile(fileName))
+        end)
+        
+        -- Якщо файл успішно прочитано, переносимо налаштування в гру
+        if success and type(data) == "table" then
+            for key, value in pairs(data) do
+                _G.Config[key] = value
+            end
+            
+            -- Оновлюємо текстове поле швидкості, якщо воно існує
+            if SpeedInput then
+                SpeedInput.Text = tostring(_G.Config.FlySpeed)
+            end
+            
+            print("[Xeno Memory]: Налаштування успішно завантажено з конфігу!")
+        end
+    end
+end
+
+-- Функція для примусового запису налаштувань у текстовий файл
+local function autoSaveXenoConfig()
+    if writefile then
+        pcall(function()
+            writefile(fileName, HttpService:JSONEncode(_G.Config))
+        end)
+    end
+end
+
+-- ЗАПУСКАЄМО ЗАВАНТАЖЕННЯ ПАМ'ЯТІ ОДРАЗУ ПРИ ЗАПУСКУ ЧАСТИНИ 5
+autoLoadXenoConfig()
+
+-- АВТОНОМНИЙ ЦИКЛ ЗБЕРЕЖЕННЯ (Перевіряє зміни кожні 2 секунди)
+task.spawn(function()
+    local lastSpeed = _G.Config.FlySpeed
+    local lastTime = _G.Config.VisualTime
+    local lastGray = _G.Config.GraySky
+    local lastShake = _G.Config.AntiShake
+    local lastFont = _G.Config.SelectedFont
+
+    while _G.ScriptRunning and task.wait(2) do
+        -- Якщо користувач натиснув якусь кнопку і змінив стан — автоматично записуємо у файл
+        if _G.Config.FlySpeed ~= lastSpeed 
+        or _G.Config.VisualTime ~= lastTime 
+        or _G.Config.GraySky ~= lastGray 
+        or _G.Config.AntiShake ~= lastShake 
+        or _G.Config.SelectedFont ~= lastFont then
+            
+            -- Оновлюємо збережені значення для наступної перевірки
+            lastSpeed = _G.Config.FlySpeed
+            lastTime = _G.Config.VisualTime
+            lastGray = _G.Config.GraySky
+            lastShake = _G.Config.AntiShake
+            lastFont = _G.Config.SelectedFont
+            
+            -- Записуємо зміни в пам'ять
+            autoSaveXenoConfig()
+            print("[Xeno Memory]: Зміни конфігурації автоматично збережено!")
+        end
+    end
+end)

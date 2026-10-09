@@ -4,7 +4,7 @@ if game:GetService("CoreGui"):FindFirstChild("XenoUltimateMenuGui") then
 end
 
 -- =========================================================
--- ГЛОБАЛЬНІ ЗМІННІ (Без автопам'яті файлів для легкості коду)
+-- ГЛОБАЛЬНІ ЗМІННІ (Для безпомилкової взаємодії всіх частин)
 -- =========================================================
 _G.ScriptRunning = true
 _G.Config = { 
@@ -54,7 +54,7 @@ Instance.new("UICorner", ToggleMenuBtn).CornerRadius = UDim.new(0, 8)
 ToggleMenuBtn.Active = true
 ToggleMenuBtn.Draggable = true
 
--- ГОЛОВНЕ ВІКНО МЕНЮ (Ширина 260)
+-- ГОЛОВНЕ ВІКНО МЕНЮ (Ширина 260 під 4 вкладки)
 MainFrame.Name = "BF_Xeno_Tabbed_Menu"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
@@ -129,10 +129,10 @@ local function createButton(parent, text, color)
     return btn
 end
 
--- ГАРАНТОВАНЕ СТВОРЕННЯ ВСІХ КНОПОК
+-- ГАРАНТОВАНЕ СТВОРЕННЯ ВСІХ КНОПОК ФУНКЦІЙ
 local FlyBtn = createButton(CheatsFrame, "Fly Mode: OFF", Color3.fromRGB(192, 57, 43))
 
-local DayBtn = createButton(VisualFrame, "☀️ Особистий День", Color3.fromRGB(230, 126, 34))
+local DayBtn = createButton(VisualFrame, "☀️ Особистий Day", Color3.fromRGB(230, 126, 34))
 local NightBtn = createButton(VisualFrame, "🌙 Особиста Ніч", Color3.fromRGB(41, 128, 185))
 local DefaultTimeBtn = createButton(VisualFrame, "⌛ Класичний Час", Color3.fromRGB(39, 174, 96))
 local GraySkyBtn = createButton(VisualFrame, "🔘 Сіре Небо: OFF")
@@ -223,10 +223,10 @@ Font1Btn.MouseButton1Click:Connect(function() applyFontToAllGame("SourceSansBold
 Font2Btn.MouseButton1Click:Connect(function() applyFontToAllGame("GothamBold") end)
 Font3Btn.MouseButton1Click:Connect(function() applyFontToAllGame("Arcade") end)
 -- =========================================================
--- ЛОКАЛЬНІ ВІЗУАЛИ, АНТИ-ТРЯСІННЯ ТА НАЛАШТОВАНИЙ ПОЛІТ
+-- ЛОКАЛЬНІ ВІЗУАЛИ, АНТИ-ТРЯСІННЯ ТА ПОЛІТ (WASD + SPACE + SHIFT)
 -- =========================================================
 
--- Зберігаємо початкові матеріали та кольори для вимкнення сірого неба
+local UIS = game:GetService("UserInputService")
 local originalMaterials = {}
 
 -- 1. ЛОКАЛЬНИЙ ЧАС (День / Ніч / Класичний)
@@ -263,7 +263,6 @@ local function updateGraySkyVisual()
         end
     else
         GraySkyBtn.Text = "🔘 Сіре Небо: OFF"; GraySkyBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-        -- Повертаємо графіку Blox Fruits назад
         for obj, data in pairs(originalMaterials) do
             if obj and obj.Parent then
                 obj.Material = data.Material
@@ -298,7 +297,7 @@ task.spawn(function()
     end
 end)
 
--- 4. КЛАСИЧНИЙ РОБОЧИЙ ПОЛІТ (Fly Mode за камерою)
+-- 4. ПОЛІТ (Керування: WASD + Space вгору + Shift вниз)
 _G.ActiveXenoBV = nil
 _G.ActiveXenoBG = nil
 
@@ -307,10 +306,17 @@ local function toggleFly()
     if _G.Config.FlyMode then
         FlyBtn.Text = "Fly Mode: ON"; FlyBtn.BackgroundColor3 = Color3.fromRGB(39, 174, 96)
         if root then
-            _G.ActiveXenoBV = Instance.new("BodyVelocity", root)
-            _G.ActiveXenoBV.Name = "XenoFlyBV"; _G.ActiveXenoBV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-            _G.ActiveXenoBG = Instance.new("BodyGyro", root)
-            _G.ActiveXenoBG.Name = "XenoFlyBG"; _G.ActiveXenoBG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+            _G.ActiveXenoBV = Instance.new("BodyVelocity")
+            _G.ActiveXenoBV.Name = "XenoFlyBV"
+            _G.ActiveXenoBV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+            _G.ActiveXenoBV.Velocity = Vector3.new(0, 0, 0)
+            _G.ActiveXenoBV.Parent = root
+            
+            _G.ActiveXenoBG = Instance.new("BodyGyro")
+            _G.ActiveXenoBG.Name = "XenoFlyBG"
+            _G.ActiveXenoBG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+            _G.ActiveXenoBG.CFrame = root.CFrame
+            _G.ActiveXenoBG.Parent = root
         end
     else
         FlyBtn.Text = "Fly Mode: OFF"; FlyBtn.BackgroundColor3 = Color3.fromRGB(192, 57, 43)
@@ -318,22 +324,34 @@ local function toggleFly()
             if root:FindFirstChild("XenoFlyBV") then root.XenoFlyBV:Destroy() end
             if root:FindFirstChild("XenoFlyBG") then root.XenoFlyBG:Destroy() end
         end
-        if _G.ActiveXenoBV then _G.ActiveXenoBV:Destroy() end
-        if _G.ActiveXenoBG then _G.ActiveXenoBG:Destroy() end
+        if _G.ActiveXenoBV then _G.ActiveXenoBV:Destroy() _G.ActiveXenoBV = nil end
+        if _G.ActiveXenoBG then _G.ActiveXenoBG:Destroy() _G.ActiveXenoBG = nil end
     end
 end
 FlyBtn.MouseButton1Click:Connect(function() _G.Config.FlyMode = not _G.Config.FlyMode; toggleFly() end)
 
+-- Цикл розрахунку напрямку WASD + клавіш висоти
 task.spawn(function()
     while _G.ScriptRunning and task.wait(0.01) do
         if _G.Config.FlyMode and _G.ActiveXenoBV and _G.ActiveXenoBG and Player.Character then
             pcall(function()
                 local hum = Player.Character:FindFirstChildOfClass("Humanoid")
-                _G.ActiveXenoBG.CFrame = workspace.CurrentCamera.CFrame
-                if hum and hum.MoveDirection.Magnitude > 0 then
-                    _G.ActiveXenoBV.Velocity = workspace.CurrentCamera.CFrame.LookVector * _G.Config.FlySpeed
-                else
-                    _G.ActiveXenoBV.Velocity = Vector3.new(0, 0, 0)
+                local root = Player.Character:FindFirstChild("HumanoidRootPart")
+                
+                if hum and root then
+                    local camLook = workspace.CurrentCamera.CFrame.LookVector
+                    _G.ActiveXenoBG.CFrame = CFrame.new(root.Position, root.Position + Vector3.new(camLook.X, 0, camLook.Z))
+                    
+                    local moveDir = hum.MoveDirection * _G.Config.FlySpeed
+                    local verticalSpeed = 0
+                    
+                    if UIS:IsKeyDown(Enum.KeyCode.Space) then
+                        verticalSpeed = _G.Config.FlySpeed
+                    elseif UIS:IsKeyDown(Enum.KeyCode.LeftShift) or UIS:IsKeyDown(Enum.KeyCode.RightShift) then
+                        verticalSpeed = -_G.Config.FlySpeed
+                    end
+                    
+                    _G.ActiveXenoBV.Velocity = Vector3.new(moveDir.X, verticalSpeed, moveDir.Z)
                 end
             end)
         end
@@ -350,6 +368,8 @@ ExitBtn.MouseButton1Click:Connect(function()
     _G.ScriptRunning = false; _G.Config.FlyMode = false; toggleFly(); ScreenGui:Destroy()
 end)
 
--- Автостарт
-applyFontToAllGame(_G.Config.SelectedFont); updateGraySkyVisual(); updateAntiShakeLogic(); toggleFly()
-
+-- Автостарт збережених шрифтів та візуалів
+applyFontToAllGame(_G.Config.SelectedFont)
+updateGraySkyVisual()
+updateAntiShakeLogic()
+toggleFly()

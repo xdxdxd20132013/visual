@@ -1,42 +1,35 @@
--- Очищення старого меню перед перезапуском, щоб інтерфейси не накладалися
+-- Очищення старого меню перед перезапуском
 if game:GetService("CoreGui"):FindFirstChild("XenoUltimateMenuGui") then
     game:GetService("CoreGui").XenoUltimateMenuGui:Destroy()
 end
+
+-- ГОЛОВНІ ЗМІННІ (Тепер доступні для всього коду)
+_G.ScriptRunning = true
+_G.Config = { 
+    FlySpeed = 250, 
+    GraySky = false, 
+    AntiShake = false, 
+    FlyMode = false, 
+    VisualTime = "Default", 
+    SelectedFont = "SourceSansBold" 
+}
 
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
 local ToggleMenuBtn = Instance.new("TextButton")
 
--- Перемикачі вкладок (Тепер 4 розділи)
+-- Перемикачі вкладок (4 розділи)
 local CheatsTabBtn = Instance.new("TextButton")
 local VisualTabBtn = Instance.new("TextButton")
-local FontTabBtn = Instance.new("TextButton")      -- Нова кнопка шрифтів
+local FontTabBtn = Instance.new("TextButton")
 local SettingsTabBtn = Instance.new("TextButton")
 
 -- Контейнери для розділів
 local CheatsFrame = Instance.new("Frame")
 local VisualFrame = Instance.new("Frame")
-local FontFrame = Instance.new("Frame")            -- Новий фрейм шрифтів
+local FontFrame = Instance.new("Frame")
 local SettingsFrame = Instance.new("Frame")
-
--- Елементи всередині вкладок
-local FlyBtn = Instance.new("TextButton")
-
-local DayBtn = Instance.new("TextButton")
-local NightBtn = Instance.new("TextButton")
-local GraySkyBtn = Instance.new("TextButton")
-local DefaultTimeBtn = Instance.new("TextButton")
-
--- Кнопки розділу Шрифтів
-local Font1Btn = Instance.new("TextButton")
-local Font2Btn = Instance.new("TextButton")
-local Font3Btn = Instance.new("TextButton")
-
-local SpeedTitle = Instance.new("TextLabel")
-local SpeedInput = Instance.new("TextBox")
-local SetSpeedBtn = Instance.new("TextButton")
-local ExitBtn = Instance.new("TextButton")
 
 local Player = game:GetService("Players").LocalPlayer
 local Lighting = game:GetService("Lighting")
@@ -47,7 +40,7 @@ ScreenGui.Parent = game:GetService("CoreGui") or Player:WaitForChild("PlayerGui"
 ScreenGui.Name = "XenoUltimateMenuGui"
 ScreenGui.ResetOnSpawn = false
 
--- КНОПКА-КВАДРАТИК ON/OFF (ЗГОРТАННЯ ПАНЕЛІ)
+-- КНОПКА ON/OFF (ЗГОРТАННЯ МЕНЮ)
 ToggleMenuBtn.Name = "XenoToggleBtn"
 ToggleMenuBtn.Parent = ScreenGui
 ToggleMenuBtn.Position = UDim2.new(0.01, 0, 0.3, 0)
@@ -61,7 +54,7 @@ Instance.new("UICorner", ToggleMenuBtn).CornerRadius = UDim.new(0, 8)
 ToggleMenuBtn.Active = true
 ToggleMenuBtn.Draggable = true
 
--- ГОЛОВНЕ ВІКНО МЕНЮ (Ширину трохи збільшено до 260 під 4 кнопки)
+-- ГОЛОВНЕ ВІКНО МЕНЮ
 MainFrame.Name = "BF_Xeno_Tabbed_Menu"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
@@ -79,11 +72,27 @@ Title.Text = "Blox Fruits Perfect [Xeno]"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.SourceSansBold
--- СТИЛІЗАЦІЯ КНОПОК ВКЛАДОК (Розраховано на 4 кнопки в ряд)
+
+-- ФУНКЦІЯ ЗАВАНТАЖЕННЯ ТА ЗБЕРЕЖЕННЯ
+local function loadSettings()
+    if readfile and isfile and isfile(fileName) then
+        local success, data = pcall(function() return HttpService:JSONDecode(readfile(fileName)) end)
+        if success and type(data) == "table" then
+            for k, v in pairs(data) do _G.Config[k] = v end
+        end
+    end
+end
+
+_G.SaveXenoSettings = function()
+    if writefile then pcall(function() writefile(fileName, HttpService:JSONEncode(_G.Config)) end) end
+end
+
+loadSettings()
+-- СТИЛІЗАЦІЯ ВКЛАДОК (4 в ряд)
 local function styleTabSelect(btn, text, xPos)
     btn.Parent = MainFrame
     btn.Position = UDim2.new(xPos, 0, 0.14, 0)
-    btn.Size = UDim2.new(0.22, 0, 0, 26) -- Компактний розмір під 4 розділи
+    btn.Size = UDim2.new(0.22, 0, 0, 26)
     btn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
     btn.Text = text
     btn.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -92,13 +101,13 @@ local function styleTabSelect(btn, text, xPos)
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
 end
 
-styleTabSelect(CheatsTabBtn, "⚔️ Чіти", 0.03)
-styleTabSelect(VisualTabBtn, "👁️ Віз.", 0.27)
+styleTabSelect(CheatsTabBtn, "⚔️ Читы", 0.03)
+styleTabSelect(VisualTabBtn, "👁️ Виз.", 0.27)
 styleTabSelect(FontTabBtn, "✍️ Шриф.", 0.51)
-styleTabSelect(SettingsTabBtn, "⚙️ Нал.", 0.75)
+styleTabSelect(SettingsTabBtn, "⚙️ Настр.", 0.75)
 CheatsTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 
--- СИСТЕМА КОНТЕЙНЕРІВ ДЛЯ ВКЛАДОК
+-- СОЗДАНИЕ КОНТЕЙНЕРОВ ДЛЯ ВКЛАДОК
 local function createTabFrame(f, name, visible)
     f.Name = name 
     f.Parent = MainFrame
@@ -122,8 +131,9 @@ createTabFrame(VisualFrame, "VisualSection", false)
 createTabFrame(FontFrame, "FontSection", false)
 createTabFrame(SettingsFrame, "SettingsSection", false)
 
--- ШАБЛОН ДЛЯ КНОПОК ФУНКЦІЙ
-local function styleButton(btn, parent, text, color)
+-- ФУНКЦІЯ ДЛЯ СТВОРЕННЯ ТА СТИЛІЗАЦІЇ КНОПОК
+local function createButton(parent, text, color)
+    local btn = Instance.new("TextButton")
     btn.Parent = parent 
     btn.Size = UDim2.new(1, 0, 0, 28)
     btn.BackgroundColor3 = color or Color3.fromRGB(45, 45, 55) 
@@ -132,48 +142,24 @@ local function styleButton(btn, parent, text, color)
     btn.TextSize = 12 
     btn.Font = Enum.Font.SourceSansBold
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
+    return btn
 end
 
 -- =========================================================
--- ОНОВЛЕНА КОНФІГ СИСТЕМА З ПІДТРИМКОЮ ШРИФТІВ
+-- СТВОРЕННЯ КНОПОК У ВКЛАДКАХ
 -- =========================================================
-_G.Config = { 
-    FlySpeed = 250, 
-    GraySky = false, 
-    AntiShake = false, 
-    FlyMode = false,
-    VisualTime = "Default",
-    SelectedFont = "SourceSansBold" -- Шрифт за замовчуванням
-}
+local FlyBtn = createButton(CheatsFrame, "Fly Mode: OFF", Color3.fromRGB(192, 57, 43))
 
-local function loadSettings()
-    if readfile and isfile and isfile(fileName) then
-        local success, data = pcall(function() return HttpService:JSONDecode(readfile(fileName)) end)
-        if success and type(data) == "table" then
-            for k, v in pairs(data) do _G.Config[k] = v end
-        end
-    end
-end
+local DayBtn = createButton(VisualFrame, "☀️ Особистий День", Color3.fromRGB(230, 126, 34))
+local NightBtn = createButton(VisualFrame, "🌙 Особиста Ніч", Color3.fromRGB(41, 128, 185))
+local GraySkyBtn = createButton(VisualFrame, "🔘 Сіре Небо: OFF")
+local AntiShakeBtn = createButton(VisualFrame, "🔘 Трясіння екрану: OFF")
 
-local function saveSettings()
-    if writefile then pcall(function() writefile(fileName, HttpService:JSONEncode(_G.Config)) end) end
-end
+local Font1Btn = createButton(FontFrame, "✍️ Шрифт: SourceSans", Color3.fromRGB(52, 73, 94))
+local Font2Btn = createButton(FontFrame, "✍️ Шрифт: Gotham", Color3.fromRGB(41, 128, 185))
+local Font3Btn = createButton(FontFrame, "✍️ Шрифт: Arcade", Color3.fromRGB(142, 68, 173))
 
-loadSettings()
--- НАПОВНЕННЯ ВСІХ 4 ВКЛАДОК КНОПКАМИ
-styleButton(FlyBtn, CheatsFrame, "Fly Mode: OFF", Color3.fromRGB(192, 57, 43))
-
-styleButton(DayBtn, VisualFrame, "☀️ Особистий День", Color3.fromRGB(230, 126, 34))
-styleButton(NightBtn, VisualFrame, "🌙 Особиста Ніч", Color3.fromRGB(41, 128, 185))
-styleButton(GraySkyBtn, VisualFrame, "🔘 Сіре Небо: OFF")
-styleButton(AntiShakeBtn, VisualFrame, "🔘 Трясіння екрану: OFF")
-
--- КНОПКИ ДЛЯ НОВОГО РОЗДІЛУ ШРИФТІВ
-styleButton(Font1Btn, FontFrame, "✍️ Шрифт: SourceSans", Color3.fromRGB(52, 73, 94))
-styleButton(Font2Btn, FontFrame, "✍️ Шрифт: GothamBold", Color3.fromRGB(41, 128, 185))
-styleButton(Font3Btn, FontFrame, "✍️ Шрифт: Arcade / SciFi", Color3.fromRGB(142, 68, 173))
-
--- ВЕРСТКА ВКЛАДКИ НАЛАШТУВАНЬ
+-- ПОЛЯ ДЛЯ НАЛАШТУВАННЯ ШВИДКОСТІ
 SpeedTitle.Parent = SettingsFrame 
 SpeedTitle.BackgroundTransparency = 1 
 SpeedTitle.Size = UDim2.new(1, 0, 0, 15)
@@ -188,26 +174,24 @@ SpeedRow.Size = UDim2.new(1, 0, 0, 26)
 Instance.new("UIListLayout", SpeedRow).FillDirection = Enum.FillDirection.Horizontal
 SpeedRow.UIListLayout.Padding = UDim.new(0, 8)
 
-SpeedInput.Parent = SpeedRow 
+local SpeedInput = Instance.new("TextBox", SpeedRow)
 SpeedInput.Size = UDim2.new(0.45, 0, 1, 0) 
 SpeedInput.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-SpeedInput.Text = tostring(_G.Config.FlySpeed)
+SpeedInput.Text = tostring(_G.Config.FlySpeed) 
 SpeedInput.TextColor3 = Color3.fromRGB(255, 255, 255) 
 Instance.new("UICorner", SpeedInput).CornerRadius = UDim.new(0, 5)
 
-styleButton(SetSpeedBtn, SpeedRow, "Зберегти", Color3.fromRGB(52, 73, 94)) 
+local SetSpeedBtn = createButton(SpeedRow, "Зберегти", Color3.fromRGB(52, 73, 94)) 
 SetSpeedBtn.Size = UDim2.new(0.5, 0, 1, 0)
 
 local Spacer = Instance.new("Frame", SettingsFrame)
 Spacer.BackgroundTransparency = 1
 Spacer.Size = UDim2.new(1, 0, 0, 10)
 
-styleButton(ExitBtn, SettingsFrame, "STOP & DESTROY", Color3.fromRGB(192, 57, 43))
-
+local ExitBtn = createButton(SettingsFrame, "STOP & DESTROY", Color3.fromRGB(192, 57, 43))
 -- =========================================================
--- ЛОГІКА ПЕРЕМИКАННЯ 4 ВКЛАДОК ТА ЗГОРТАННЯ
+-- ЛОГІКА ПЕРЕМИКАННЯ 4 ВКЛАДОК ТА ЗГОРТАННЯ ПАНЕЛІ
 -- =========================================================
-_G.ScriptRunning = true
 
 -- Головне увімкнення / вимкнення панелі (ON/OFF)
 ToggleMenuBtn.MouseButton1Click:Connect(function()
@@ -216,7 +200,7 @@ ToggleMenuBtn.MouseButton1Click:Connect(function()
     ToggleMenuBtn.BackgroundColor3 = MainFrame.Visible and Color3.fromRGB(39, 174, 96) or Color3.fromRGB(192, 57, 43)
 end)
 
--- Функція для чистого перемикання 4 вікон
+-- Функція для чистого перемикання 4 вікон без помилок
 local function switchTab(activeFrame, activeBtn)
     CheatsFrame.Visible = (activeFrame == CheatsFrame)
     VisualFrame.Visible = (activeFrame == VisualFrame)
@@ -236,7 +220,7 @@ VisualTabBtn.MouseButton1Click:Connect(function() switchTab(VisualFrame, VisualT
 FontTabBtn.MouseButton1Click:Connect(function() switchTab(FontFrame, FontTabBtn) end)
 SettingsTabBtn.MouseButton1Click:Connect(function() switchTab(SettingsFrame, SettingsTabBtn) end)
 -- =========================================================
--- ЛОГІКА ЗМІНИ ШРИФТІВ, ЛОКАЛЬНИХ ВІЗУАЛІВ ТА ПОЛЬОТУ
+-- ЛОГІКА ШРИФТІВ, ЛОКАЛЬНИХ ВІЗУАЛІВ ТА ВИПРАВЛЕНОГО ПОЛЬОТУ
 -- =========================================================
 
 -- 1. СИСТЕМА ЛОКАЛЬНОЇ ЗМІНИ ШРИФТІВ (Тільки для меню)
@@ -245,9 +229,8 @@ local function applyFontToMenu(fontName)
     if not selectedEnum then return end
     
     _G.Config.SelectedFont = fontName
-    saveSettings()
+    _G.SaveXenoSettings()
 
-    -- Оновлюємо шрифт усіх текстових елементів всередині меню
     Title.Font = selectedEnum
     ToggleMenuBtn.Font = selectedEnum
     CheatsTabBtn.Font = selectedEnum
@@ -257,10 +240,11 @@ local function applyFontToMenu(fontName)
     SpeedTitle.Font = selectedEnum
     SpeedInput.Font = selectedEnum
     
-    -- Шрифт кнопок
-    for _, obj in pairs(MainFrame:GetDescendants()) do
+    for _, obj in pairs(ScreenGui:GetDescendants()) do
         if obj:IsA("TextButton") or obj:IsA("TextLabel") or obj:IsA("TextBox") then
-            obj.Font = selectedEnum
+            if obj.Name ~= "XenoToggleBtn" then
+                obj.Font = selectedEnum
+            end
         end
     end
 end
@@ -281,14 +265,14 @@ end
 DayBtn.MouseButton1Click:Connect(function()
     _G.Config.VisualTime = "Day"
     _G.Config.GraySky = false
-    saveSettings()
+    _G.SaveXenoSettings()
     applyVisualTime()
 end)
 
 NightBtn.MouseButton1Click:Connect(function()
     _G.Config.VisualTime = "Night"
     _G.Config.GraySky = false
-    saveSettings()
+    _G.SaveXenoSettings()
     applyVisualTime()
 end)
 
@@ -315,7 +299,7 @@ end
 GraySkyBtn.MouseButton1Click:Connect(function()
     _G.Config.GraySky = not _G.Config.GraySky
     if _G.Config.GraySky then _G.Config.VisualTime = "Default" end
-    saveSettings()
+    _G.SaveXenoSettings()
     updateGraySkyVisual()
 end)
 
@@ -338,7 +322,7 @@ end
 
 AntiShakeBtn.MouseButton1Click:Connect(function()
     _G.Config.AntiShake = not _G.Config.AntiShake
-    saveSettings()
+    _G.SaveXenoSettings()
     updateAntiShakeLogic()
 end)
 
@@ -357,9 +341,9 @@ task.spawn(function()
     end
 end)
 
--- 5. РОБОЧИЙ ПОЛІТ (Fly Mode)
-local currentBV = nil
-local currentBG = nil
+-- 5. ВИПРАВЛЕНИЙ ПОЛІТ (Глобальні змінні для точного відстеження в циклі руху)
+_G.ActiveXenoBV = nil
+_G.ActiveXenoBG = nil
 
 local function toggleFly()
     local char = Player.Character
@@ -369,17 +353,19 @@ local function toggleFly()
         FlyBtn.Text = "Fly Mode: ON"
         FlyBtn.BackgroundColor3 = Color3.fromRGB(39, 174, 96)
         if root then
-            currentBV = Instance.new("BodyVelocity")
-            currentBV.Name = "XenoFlyBV"
-            currentBV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-            currentBV.Velocity = Vector3.new(0, 0, 0)
-            currentBV.Parent = root
+            -- Створюємо левітацію
+            _G.ActiveXenoBV = Instance.new("BodyVelocity")
+            _G.ActiveXenoBV.Name = "XenoFlyBV"
+            _G.ActiveXenoBV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+            _G.ActiveXenoBV.Velocity = Vector3.new(0, 0, 0)
+            _G.ActiveXenoBV.Parent = root
             
-            currentBG = Instance.new("BodyGyro")
-            currentBG.Name = "XenoFlyBG"
-            currentBG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-            currentBG.CFrame = root.CFrame
-            currentBG.Parent = root
+            -- Створюємо кут тримання камери
+            _G.ActiveXenoBG = Instance.new("BodyGyro")
+            _G.ActiveXenoBG.Name = "XenoFlyBG"
+            _G.ActiveXenoBG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+            _G.ActiveXenoBG.CFrame = root.CFrame
+            _G.ActiveXenoBG.Parent = root
         end
     else
         FlyBtn.Text = "Fly Mode: OFF"
@@ -388,8 +374,8 @@ local function toggleFly()
             if root:FindFirstChild("XenoFlyBV") then root.XenoFlyBV:Destroy() end
             if root:FindFirstChild("XenoFlyBG") then root.XenoFlyBG:Destroy() end
         end
-        if currentBV then currentBV:Destroy() currentBV = nil end
-        if currentBG then currentBG:Destroy() currentBG = nil end
+        if _G.ActiveXenoBV then _G.ActiveXenoBV:Destroy() _G.ActiveXenoBV = nil end
+        if _G.ActiveXenoBG then _G.ActiveXenoBG:Destroy() _G.ActiveXenoBG = nil end
     end
 end
 
@@ -398,18 +384,19 @@ FlyBtn.MouseButton1Click:Connect(function()
     toggleFly()
 end)
 
+-- Спільний цикл руху тепер гарантовано бачить глобальні _G.ActiveXeno змінні
 task.spawn(function()
     while _G.ScriptRunning and task.wait(0.01) do
-        if _G.Config.FlyMode and currentBV and currentBG then
+        if _G.Config.FlyMode and _G.ActiveXenoBV and _G.ActiveXenoBG then
             pcall(function()
                 local char = Player.Character
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
                 if char and hum then
-                    currentBG.CFrame = workspace.CurrentCamera.CFrame
+                    _G.ActiveXenoBG.CFrame = workspace.CurrentCamera.CFrame
                     if hum.MoveDirection.Magnitude > 0 then
-                        currentBV.Velocity = workspace.CurrentCamera.CFrame.LookVector * _G.Config.FlySpeed
+                        _G.ActiveXenoBV.Velocity = workspace.CurrentCamera.CFrame.LookVector * _G.Config.FlySpeed
                     else
-                        currentBV.Velocity = Vector3.new(0, 0, 0)
+                        _G.ActiveXenoBV.Velocity = Vector3.new(0, 0, 0)
                     end
                 end
             end)
@@ -417,10 +404,13 @@ task.spawn(function()
     end
 end)
 
--- 6. ЗБЕРЕЖЕННЯ ШВИДКОСТІ ТА ВИХІД
+-- 6. ЗБЕРЕЖЕННЯ ШВИДКОСТІ ТА ПОВНИЙ ВИХІД
 SetSpeedBtn.MouseButton1Click:Connect(function()
     local num = tonumber(SpeedInput.Text)
-    if num then _G.Config.FlySpeed = num saveSettings() end
+    if num then 
+        _G.Config.FlySpeed = num 
+        _G.SaveXenoSettings() 
+    end
 end)
 
 ExitBtn.MouseButton1Click:Connect(function()
@@ -430,7 +420,7 @@ ExitBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- Автоматичний старт збережених параметрів
+-- Авто-старт параметрів після зчитування конфігу
 applyFontToMenu(_G.Config.SelectedFont)
 updateGraySkyVisual()
 updateAntiShakeLogic()
